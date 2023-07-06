@@ -640,10 +640,6 @@ HAL_FDCAN_TxBufferCompleteCallback(FDCAN_HandleTypeDef* hfdcan, uint32_t BufferI
                 }
             }
         }
-        /* Clear counter if no more messages */
-        if (i == 0U) {
-            CANModule_local->CANtxCount = 0U;
-        }
         CO_UNLOCK_CAN_SEND(CANModule_local);
     }
 }
