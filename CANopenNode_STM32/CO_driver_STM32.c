@@ -574,6 +574,10 @@ prv_read_can_received_msg(CAN_HandleTypeDef* hcan, uint32_t fifo, uint32_t fifo_
     if (messageFound && buffer != NULL && buffer->CANrx_callback != NULL) {
         buffer->CANrx_callback(buffer->object, (void*)&rcvMsg);
     }
+	
+	/* Recursively call the prv_read_can_received_msg in case there are more messages in RX fifo */
+    if(HAL_FDCAN_GetRxFifoFillLevel(hfdcan, fifo) != 0)
+    	prv_read_can_received_msg(hfdcan, fifo, fifo_isrs);
 }
 
 #ifdef CO_STM32_FDCAN_Driver
