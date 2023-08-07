@@ -350,15 +350,19 @@ CO_CANsend(CO_CANmodule_t* CANmodule, CO_CANtx_t* buffer) {
      * Send message to CAN network
      *
      * Lock interrupts for atomic operation
+     * Here we use a local varaible for primask to make it safe when CO_CANsend  
+     * is called from another critical section
      */
-    CO_LOCK_CAN_SEND(CANmodule);
+    uint32_t primask_send = __get_PRIMASK();
+    __disable_irq();
+
     if (prv_send_can_message(CANmodule, buffer)) {
         CANmodule->bufferInhibitFlag = buffer->syncFlag;
     } else {
         buffer->bufferFull = true;
         CANmodule->CANtxCount++;
     }
-    CO_UNLOCK_CAN_SEND(CANmodule);
+    __set_PRIMASK(primask_send);
 
     return err;
 }
@@ -574,10 +578,11 @@ prv_read_can_received_msg(CAN_HandleTypeDef* hcan, uint32_t fifo, uint32_t fifo_
     if (messageFound && buffer != NULL && buffer->CANrx_callback != NULL) {
         buffer->CANrx_callback(buffer->object, (void*)&rcvMsg);
     }
-	
-	/* Recursively call the prv_read_can_received_msg in case there are more messages in RX fifo */
-    if(HAL_FDCAN_GetRxFifoFillLevel(hfdcan, fifo) != 0)
-    	prv_read_can_received_msg(hfdcan, fifo, fifo_isrs);
+
+    /* Recursively call the prv_read_can_received_msg in case there are more messages in RX fifo */
+    if (HAL_FDCAN_GetRxFifoFillLevel(hfdcan, fifo) != 0) {
+        prv_read_can_received_msg(hfdcan, fifo, fifo_isrs);
+    }
 }
 
 #ifdef CO_STM32_FDCAN_Driver
